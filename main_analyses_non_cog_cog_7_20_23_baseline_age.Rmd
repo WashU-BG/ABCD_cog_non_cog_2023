@@ -1,0 +1,566 @@
+---
+title: "non cog cog Analyses"
+author: "aaron gorelik, emma johnson, alexander hatoum"
+output:
+  pdf_document: default
+  pdf: default
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+
+## Libraries, functions
+```{r}
+library(data.table)
+library(lmerTest)
+library(lme4)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(ggrepel)
+library(forcats)
+library(ggsci)
+library(RColorBrewer)
+library(optimx)
+library(minqa)
+library(dfoptim)
+library(survey)
+library(lavaan.survey)
+library(Polychrome)
+library(scales)
+library(ggnewscale)
+library(ggpubr)
+library(gplots)
+library(psych)
+#Functions that help
+#Nabs warnings from a loop
+withWarnings <- function(expr) {
+  myWarnings <- NULL
+  wHandler <- function(w) {
+    myWarnings <<- c(myWarnings, list(w))
+    invokeRestart("muffleWarning")
+  }
+  val <- withCallingHandlers(expr, warning = wHandler)
+  list(value = val, warnings = myWarnings)
+} 
+set.seed(42)
+
+```
+
+## Reading in Baseline Data
+```{r}
+
+prs_baseline <- read_excel('data') 
+
+prs_baseline$site_id <- ifelse(prs_baseline$site_id == 22, 21, prs_baseline$site_id)
+prs_baseline[prs_baseline == "NA"] <- NA
+prs_baseline[prs_baseline == ""] <- NA
+
+which(colnames(prs_baseline) == "nihtbx_totalcomp_uncorrected")
+which(colnames(prs_baseline) == "adhd_ever_dichotomous")
+which(colnames(prs_baseline) == "cash_choice_task")
+which(colnames(prs_baseline) == "can_initiate")
+
+
+#Have to change here to the column names for the ordered categorical variables, this code changes to factor
+prs_baseline[,c(1:4,20,182:194)] <- lapply(prs_baseline[,c(1:4,20,182:194)],as.factor)
+prs_baseline[,c(5:19,21:181)] <- lapply(prs_baseline[,c(5:19,21:181)],as.numeric)
+ncol(prs_baseline)
+#Scale the numeric variables
+prs_baseline <- prs_baseline %>%
+  mutate_if(is.numeric, scale)
+
+prs_baseline <- as.data.frame(prs_baseline)
+
+#psych::describe(prs_baseline[,XX:YY])
+
+
+
+
+
+attach(prs_baseline)
+```
+
+##BEHAVIORAL 
+```{r}
+
+# CONTINUOUS VARIALBES AS OUTCOME
+First <- 21 
+Last <- 25
+#creates objects for the loop
+Beta <- NULL
+STE <- NULL
+Area <- NULL
+Pval <- NULL
+i <-  NULL
+Warn <- NULL
+Results <- NULL
+Sigs <- NULL
+LMEOut <- NULL
+a <- NULL
+STE2 <- NULL
+Beta2 <- NULL
+Pval2 <- NULL
+#Runs the for loop
+for (i in First:Last) {
+  print(i)
+  LMEOut <- withWarnings( a <- lmer(prs_baseline[,i] ~ non_cog_score + cog_score + C1 + C2 + C3 + C4 + C5 + C6 + C7 + C8 + C9 + C10 + sex + interview_age + (1|site_id) + (1|rel_family_id), control = lmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=1e5))))
+ Beta[i] <- summary(a)$`coefficients`[2]
+  STE[i] <- summary(a)$`coefficients`[2,2]
+  Pval[i] <-  summary(a)$`coefficients`[2,5]
+   Beta2[i] <- summary(a)$`coefficients`[3]
+  STE2[i] <- summary(a)$`coefficients`[3,2]
+  Pval2[i] <-  summary(a)$`coefficients`[3,5]
+  Area[i] <- colnames(prs_baseline)[i]
+  Warn[i] <- LMEOut$warnings
+}
+
+detach(prs_baseline)
+#Store results in a dataframe
+Results_sb <- cbind.data.frame(Area[First:length(Area)], Beta[First:length(Beta)], STE[First:length(STE)], Pval[First:length(Pval)],  Beta2[First:length(Beta2)], STE2[First:length(STE2)], Pval2[First:length(Pval2)])
+#Relabel Results
+colnames(Results_sb) <- c("Variable", "Beta_non_cog", "STE_non_cog", "Pval_non_cog", "Beta_cog", "STE_cog", "Pval_cog")
+
+#FU2 for one:
+
+attach(prs_baseline)
+First <- 26 
+Last <- 26
+#creates objects for the loop
+Beta <- NULL
+STE <- NULL
+Area <- NULL
+Pval <- NULL
+i <-  NULL
+Warn <- NULL
+Results <- NULL
+Sigs <- NULL
+LMEOut <- NULL
+a <- NULL
+STE2 <- NULL
+Beta2 <- NULL
+Pval2 <- NULL
+#Runs the for loop
+for (i in First:Last) {
+  print(i)
+  LMEOut <- withWarnings( a <- lmer(prs_baseline[,i] ~ non_cog_score + cog_score + C1 + C2 + C3 + C4 + C5 + C6 + C7 + C8 + C9 + C10 + sex + interview_age + (1|site_id) + (1|rel_family_id), control = lmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=1e5))))
+ Beta[i] <- summary(a)$`coefficients`[2]
+  STE[i] <- summary(a)$`coefficients`[2,2]
+  Pval[i] <-  summary(a)$`coefficients`[2,5]
+   Beta2[i] <- summary(a)$`coefficients`[3]
+  STE2[i] <- summary(a)$`coefficients`[3,2]
+  Pval2[i] <-  summary(a)$`coefficients`[3,5]
+  Area[i] <- colnames(prs_baseline)[i]
+  Warn[i] <- LMEOut$warnings
+}
+
+detach(prs_baseline)
+#Store results in a dataframe
+Results_db <- cbind.data.frame(Area[First:length(Area)], Beta[First:length(Beta)], STE[First:length(STE)], Pval[First:length(Pval)],  Beta2[First:length(Beta2)], STE2[First:length(STE2)], Pval2[First:length(Pval2)])
+#Relabel Results
+colnames(Results_db) <- c("Variable", "Beta_non_cog", "STE_non_cog", "Pval_non_cog", "Beta_cog", "STE_cog", "Pval_cog")
+Resultse <- rbind(Results_sb, Results_db)
+###
+attach(prs_baseline)
+First <- 181 
+Last <- 181
+#creates objects for the loop
+Beta <- NULL
+STE <- NULL
+Area <- NULL
+Pval <- NULL
+i <-  NULL
+Warn <- NULL
+Results <- NULL
+Sigs <- NULL
+LMEOut <- NULL
+a <- NULL
+STE2 <- NULL
+Beta2 <- NULL
+Pval2 <- NULL
+#Runs the for loop
+for (i in First:Last) {
+  print(i)
+  LMEOut <- withWarnings( a <- lmer(prs_baseline[,i] ~ non_cog_score + cog_score + C1 + C2 + C3 + C4 + C5 + C6 + C7 + C8 + C9 + C10 + sex + interview_age + (1|site_id) + (1|rel_family_id), control = lmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=1e5))))
+ Beta[i] <- summary(a)$`coefficients`[2]
+  STE[i] <- summary(a)$`coefficients`[2,2]
+  Pval[i] <-  summary(a)$`coefficients`[2,5]
+   Beta2[i] <- summary(a)$`coefficients`[3]
+  STE2[i] <- summary(a)$`coefficients`[3,2]
+  Pval2[i] <-  summary(a)$`coefficients`[3,5]
+  Area[i] <- colnames(prs_baseline)[i]
+  Warn[i] <- LMEOut$warnings
+}
+
+detach(prs_baseline)
+#Store results in a dataframe
+Results_qb <- cbind.data.frame(Area[First:length(Area)], Beta[First:length(Beta)], STE[First:length(STE)], Pval[First:length(Pval)],  Beta2[First:length(Beta2)], STE2[First:length(STE2)], Pval2[First:length(Pval2)])
+#Relabel Results
+colnames(Results_qb) <- c("Variable", "Beta_non_cog", "STE_non_cog", "Pval_non_cog", "Beta_cog", "STE_cog", "Pval_cog")
+Resultsed <- rbind(Resultse, Results_qb)
+## CATEGORICAL VARABIALES AS OUTCOME (calling for categorical variables)
+attach(prs_baseline)
+First <- 184
+Last <- 185
+Beta <- NULL
+STE <- NULL
+Area <- NULL
+Pval <- NULL
+i <-  NULL
+Warn <- NULL
+Results <- NULL
+Sigs <- NULL
+LMEOut <- NULL
+a <- NULL
+STE2 <- NULL
+Beta2 <- NULL
+Pval2 <- NULL
+for (i in First:Last) {
+  print(i)
+  LMEOut <- withWarnings( a <- glmer(prs_baseline[,i] ~ non_cog_score + cog_score +  C1 + C2 + C3 + C4 + C5 + C6 + C7 + C8 + C9 + C10 + sex + interview_age + (1|site_id) + (1|rel_family_id), family = "binomial", nAGQ = 0, control = glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=1e5))))
+  Beta[i] <- summary(a)$`coefficients`[2]
+  STE[i] <- summary(a)$`coefficients`[2,2]
+  Pval[i] <-  summary(a)$`coefficients`[2,4]
+   Beta2[i] <- summary(a)$`coefficients`[3]
+  STE2[i] <- summary(a)$`coefficients`[3,2]
+  Pval2[i] <-  summary(a)$`coefficients`[3,4]
+  Area[i] <- colnames(prs_baseline)[i]
+  Warn[i] <- LMEOut$warnings
+}
+#Store results in a dataframe
+Results_cat <- cbind.data.frame(Area[First:length(Area)], Beta[First:length(Beta)], STE[First:length(STE)], Pval[First:length(Pval)],  Beta2[First:length(Beta2)], STE2[First:length(STE2)], Pval2[First:length(Pval2)])
+
+#Relabel Results
+colnames(Results_cat) <- c("Variable", "Beta_non_cog", "STE_non_cog", "Pval_non_cog", "Beta_cog", "STE_cog", "Pval_cog")
+
+Resultsw <- rbind(Resultsed, Results_cat)
+######
+First <- 186
+Last <- 189
+Beta <- NULL
+STE <- NULL
+Area <- NULL
+Pval <- NULL
+i <-  NULL
+Warn <- NULL
+Results <- NULL
+Sigs <- NULL
+LMEOut <- NULL
+a <- NULL
+STE2 <- NULL
+Beta2 <- NULL
+Pval2 <- NULL
+for (i in First:Last) {
+  print(i)
+  LMEOut <- withWarnings( a <- glmer(prs_baseline[,i] ~ non_cog_score + cog_score +  C1 + C2 + C3 + C4 + C5 + C6 + C7 + C8 + C9 + C10 + sex + interview_age + (1|site_id) + (1|rel_family_id), family = "binomial", nAGQ = 0, control = glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=1e5))))
+  Beta[i] <- summary(a)$`coefficients`[2]
+  STE[i] <- summary(a)$`coefficients`[2,2]
+  Pval[i] <-  summary(a)$`coefficients`[2,4]
+   Beta2[i] <- summary(a)$`coefficients`[3]
+  STE2[i] <- summary(a)$`coefficients`[3,2]
+  Pval2[i] <-  summary(a)$`coefficients`[3,4]
+  Area[i] <- colnames(prs_baseline)[i]
+  Warn[i] <- LMEOut$warnings
+}
+#Store results in a dataframe
+Results_cats <- cbind.data.frame(Area[First:length(Area)], Beta[First:length(Beta)], STE[First:length(STE)], Pval[First:length(Pval)],  Beta2[First:length(Beta2)], STE2[First:length(STE2)], Pval2[First:length(Pval2)])
+
+#Relabel Results
+colnames(Results_cats) <- c("Variable", "Beta_non_cog", "STE_non_cog", "Pval_non_cog", "Beta_cog", "STE_cog", "Pval_cog")
+
+Resultsv <- rbind(Resultsw, Results_cats)
+
+######
+First <- 190
+Last <- 194
+Beta <- NULL
+STE <- NULL
+Area <- NULL
+Pval <- NULL
+i <-  NULL
+Warn <- NULL
+Results <- NULL
+Sigs <- NULL
+LMEOut <- NULL
+a <- NULL
+STE2 <- NULL
+Beta2 <- NULL
+Pval2 <- NULL
+for (i in First:Last) {
+  print(i)
+  LMEOut <- withWarnings( a <- glmer(prs_baseline[,i] ~ non_cog_score + cog_score +  C1 + C2 + C3 + C4 + C5 + C6 + C7 + C8 + C9 + C10 + sex + interview_age + (1|site_id) + (1|rel_family_id), family = "binomial", nAGQ = 0, control = glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=1e5))))
+  Beta[i] <- summary(a)$`coefficients`[2]
+  STE[i] <- summary(a)$`coefficients`[2,2]
+  Pval[i] <-  summary(a)$`coefficients`[2,4]
+   Beta2[i] <- summary(a)$`coefficients`[3]
+  STE2[i] <- summary(a)$`coefficients`[3,2]
+  Pval2[i] <-  summary(a)$`coefficients`[3,4]
+  Area[i] <- colnames(prs_baseline)[i]
+  Warn[i] <- LMEOut$warnings
+}
+Results_catsd <- cbind.data.frame(Area[First:length(Area)], Beta[First:length(Beta)], STE[First:length(STE)], Pval[First:length(Pval)],  Beta2[First:length(Beta2)], STE2[First:length(STE2)], Pval2[First:length(Pval2)])
+
+#Relabel Results
+colnames(Results_catsd) <- c("Variable", "Beta_non_cog", "STE_non_cog", "Pval_non_cog", "Beta_cog", "STE_cog", "Pval_cog")
+# merge
+Results <- rbind(Resultsv, Results_catsd)
+# 2 tiers of FDR correction
+Results$FDR_non_cog <- p.adjust(Results$Pval_non_cog, method="fdr")
+Results$FDR_cog <- p.adjust(Results$Pval_cog, method="fdr")
+Results$Bonferroni_non_cog <- p.adjust(Results$Pval_non_cog, method = "bonferroni")
+Results$Bonferroni_cog <- p.adjust(Results$Pval_cog, method = "bonferroni")
+#Write out results
+fwrite(Results, "check_7_21.csv")
+########WEALTH
+# CONTINUOUS VARIALBES AS OUTCOME
+First <- 21 
+Last <- 23
+#creates objects for the loop
+Beta <- NULL
+STE <- NULL
+Area <- NULL
+Pval <- NULL
+i <-  NULL
+Warn <- NULL
+Results <- NULL
+Sigs <- NULL
+LMEOut <- NULL
+a <- NULL
+STE2 <- NULL
+Beta2 <- NULL
+Pval2 <- NULL
+#Runs the for loop
+for (i in First:Last) {
+  print(i)
+  LMEOut <- withWarnings( a <- lmer(prs_baseline[,i] ~ non_cog_score + cog_score + C1 + C2 + C3 + C4 + C5 + C6 + C7 + C8 + C9 + C10 + sex + interview_age +reshist_addr1_adi_perc + demo_comb_income_v2b + (1|site_id) + (1|rel_family_id), control = lmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=1e5))))
+ Beta[i] <- summary(a)$`coefficients`[2]
+  STE[i] <- summary(a)$`coefficients`[2,2]
+  Pval[i] <-  summary(a)$`coefficients`[2,5]
+   Beta2[i] <- summary(a)$`coefficients`[3]
+  STE2[i] <- summary(a)$`coefficients`[3,2]
+  Pval2[i] <-  summary(a)$`coefficients`[3,5]
+  Area[i] <- colnames(prs_baseline)[i]
+  Warn[i] <- LMEOut$warnings
+}
+
+#Store results in a dataframe
+Results_mh <- cbind.data.frame(Area[First:length(Area)], Beta[First:length(Beta)], STE[First:length(STE)], Pval[First:length(Pval)],  Beta2[First:length(Beta2)], STE2[First:length(STE2)], Pval2[First:length(Pval2)])
+#Relabel Results
+colnames(Results_mh) <- c("Variable", "Beta_non_cog", "STE_non_cog", "Pval_non_cog", "Beta_cog", "STE_cog", "Pval_cog")
+
+Results_mh$FDR_non_cog <- p.adjust(Results_mh$Pval_non_cog, method="fdr")
+Results_mh$FDR_cog <- p.adjust(Results_mh$Pval_cog, method="fdr")
+Results_mh$Bonferroni_non_cog <- p.adjust(Results_mh$Pval_non_cog, method = "bonferroni")
+Results_mh$Bonferroni_cog <- p.adjust(Results_mh$Pval_cog, method = "bonferroni")
+#Write out results
+fwrite(Results_mh, "wealth_NIH_6_28.csv")
+
+```
+
+##   BRAIN ANALYSES -  ## 
+```{r}
+#COG
+#VOL_non_global
+which(colnames(prs_baseline) == "dmri_dtifa_fiberat_uncrh")
+
+# non_global
+attach(prs_baseline)
+
+First <- 27
+Last <- 94
+Beta <- NULL
+STE <- NULL
+Area <- NULL
+Pval <- NULL
+i <-  NULL
+Warn <- NULL
+Results <- NULL
+Sigs <- NULL
+LMEOut <- NULL
+a <- NULL
+STE2 <- NULL
+Beta2 <- NULL
+Pval2 <- NULL
+for (i in First:Last) {
+  print(i)
+  LMEOut <- withWarnings( a <- lmer(prs_baseline[,i] ~ non_cog_score + cog_score +  C1 + C2 + C3 + C4 + C5 + C6 + C7 + C8 + C9 + C10 + sex + interview_age + smri_vol_scs_intracranialv + mri_info_manufacturer + (1|mri_info_deviceserialnumber) + (1|rel_family_id), control = lmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=1e5))))
+  Beta[i] <- summary(a)$`coefficients`[2]
+  STE[i] <- summary(a)$`coefficients`[2,2]
+  Pval[i] <-  summary(a)$`coefficients`[2,5]
+   Beta2[i] <- summary(a)$`coefficients`[3]
+  STE2[i] <- summary(a)$`coefficients`[3,2]
+  Pval2[i] <-  summary(a)$`coefficients`[3,5]
+  Area[i] <- colnames(prs_baseline)[i]
+  Warn[i] <- LMEOut$warnings
+}
+
+#Store results in a dataframe
+SMRI <- cbind.data.frame(Area[First:length(Area)], Beta[First:length(Beta)], STE[First:length(STE)], Pval[First:length(Pval)],  Beta2[First:length(Beta2)], STE2[First:length(STE2)], Pval2[First:length(Pval2)])
+#Relabel Results
+colnames(SMRI) <- c("Variable", "Beta_non_cog", "STE_non_cog", "Pval_non_cog", "Beta_cog", "STE_cog", "Pval_cog")
+
+SMRI$FDR_non_cog <- p.adjust(SMRI$Pval_non_cog, method="fdr")
+SMRI$FDR_cog <- p.adjust(SMRI$Pval_cog, method="fdr")
+SMRI$Bonferroni_non_cog <- p.adjust(SMRI$Pval_non_cog, method = "bonferroni")
+SMRI$Bonferroni_cog <- p.adjust(SMRI$Pval_cog, method = "bonferroni")
+fwrite(SMRI, "VOL_6_28.csv")
+#DTI MD
+First <- 104
+Last <- 140
+Beta <- NULL
+STE <- NULL
+Area <- NULL
+Pval <- NULL
+i <-  NULL
+Warn <- NULL
+Results <- NULL
+Sigs <- NULL
+LMEOut <- NULL
+a <- NULL
+STE2 <- NULL
+Beta2 <- NULL
+Pval2 <- NULL
+for (i in First:Last) {
+  print(i)
+  LMEOut <- withWarnings( a <- lmer(prs_baseline[,i] ~ non_cog_score + cog_score +  C1 + C2 + C3 + C4 + C5 + C6 + C7 + C8 + C9 + C10 + sex + interview_age  + dmri_dtimd_fiberat_allfibers + mri_info_manufacturer + dmri_dti_meanmotion + (1|mri_info_deviceserialnumber) + (1|rel_family_id), control = lmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=1e5))))
+   Beta[i] <- summary(a)$`coefficients`[2]
+  STE[i] <- summary(a)$`coefficients`[2,2]
+  Pval[i] <-  summary(a)$`coefficients`[2,5]
+   Beta2[i] <- summary(a)$`coefficients`[3]
+  STE2[i] <- summary(a)$`coefficients`[3,2]
+  Pval2[i] <-  summary(a)$`coefficients`[3,5]
+  Area[i] <- colnames(prs_baseline)[i]
+  Warn[i] <- LMEOut$warnings
+}
+
+#Store results in a dataframe
+DTI <- cbind.data.frame(Area[First:length(Area)], Beta[First:length(Beta)], STE[First:length(STE)], Pval[First:length(Pval)],  Beta2[First:length(Beta2)], STE2[First:length(STE2)], Pval2[First:length(Pval2)])
+#Relabel Results
+colnames(DTI) <- c("Variable", "Beta_non_cog", "STE_non_cog", "Pval_non_cog", "Beta_cog", "STE_cog", "Pval_cog")
+DTI$FDR_non_cog <- p.adjust(DTI$Pval_non_cog, method="fdr")
+DTI$FDR_cog <- p.adjust(DTI$Pval_cog, method="fdr")
+DTI$Bonferroni_non_cog <- p.adjust(DTI$Pval_non_cog, method = "bonferroni")
+DTI$Bonferroni_cog <- p.adjust(DTI$Pval_cog, method = "bonferroni")
+
+fwrite(DTI, "DTI_MD_6_28.csv")
+#FA
+First <- 141
+Last <- 177
+Beta <- NULL
+STE <- NULL
+Area <- NULL
+Pval <- NULL
+i <-  NULL
+Warn <- NULL
+Results <- NULL
+Sigs <- NULL
+LMEOut <- NULL
+a <- NULL
+STE2 <- NULL
+Beta2 <- NULL
+Pval2 <- NULL
+for (i in First:Last) {
+  print(i)
+  LMEOut <- withWarnings( a <- lmer(prs_baseline[,i] ~ non_cog_score + cog_score +  C1 + C2 + C3 + C4 + C5 + C6 + C7 + C8 + C9 + C10 + sex + interview_age  +  dmri_dtifa_fiberat_allfibers + mri_info_manufacturer + dmri_dti_meanmotion + (1|mri_info_deviceserialnumber) + (1|rel_family_id), control = lmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=1e5))))
+   Beta[i] <- summary(a)$`coefficients`[2]
+  STE[i] <- summary(a)$`coefficients`[2,2]
+  Pval[i] <-  summary(a)$`coefficients`[2,5]
+   Beta2[i] <- summary(a)$`coefficients`[3]
+  STE2[i] <- summary(a)$`coefficients`[3,2]
+  Pval2[i] <-  summary(a)$`coefficients`[3,5]
+  Area[i] <- colnames(prs_baseline)[i]
+  Warn[i] <- LMEOut$warnings
+}
+
+#Store results in a dataframe
+DTI <- cbind.data.frame(Area[First:length(Area)], Beta[First:length(Beta)], STE[First:length(STE)], Pval[First:length(Pval)],  Beta2[First:length(Beta2)], STE2[First:length(STE2)], Pval2[First:length(Pval2)])
+#Relabel Results
+colnames(DTI) <- c("Variable", "Beta_non_cog", "STE_non_cog", "Pval_non_cog", "Beta_cog", "STE_cog", "Pval_cog")
+DTI$FDR_non_cog <- p.adjust(DTI$Pval_non_cog, method="fdr")
+DTI$FDR_cog <- p.adjust(DTI$Pval_cog, method="fdr")
+DTI$Bonferroni_non_cog <- p.adjust(DTI$Pval_non_cog, method = "bonferroni")
+DTI$Bonferroni_cog <- p.adjust(DTI$Pval_cog, method = "bonferroni")
+
+fwrite(DTI, "DTI_FA_6_28.csv")
+
+
+```
+##global
+```{r}
+#VOL__global
+
+First <- 95
+Last <- 103
+Beta <- NULL
+STE <- NULL
+Area <- NULL
+Pval <- NULL
+i <-  NULL
+Warn <- NULL
+Results <- NULL
+Sigs <- NULL
+LMEOut <- NULL
+a <- NULL
+STE2 <- NULL
+Beta2 <- NULL
+Pval2 <- NULL
+for (i in First:Last) {
+  print(i)
+  LMEOut <- withWarnings( a <- lmer(prs_baseline[,i] ~ non_cog_score + cog_score +  C1 + C2 + C3 + C4 + C5 + C6 + C7 + C8 + C9 + C10 + sex + interview_age + mri_info_manufacturer + (1|mri_info_deviceserialnumber) + (1|rel_family_id), control = lmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=1e5))))
+  Beta[i] <- summary(a)$`coefficients`[2]
+  STE[i] <- summary(a)$`coefficients`[2,2]
+  Pval[i] <-  summary(a)$`coefficients`[2,5]
+   Beta2[i] <- summary(a)$`coefficients`[3]
+  STE2[i] <- summary(a)$`coefficients`[3,2]
+  Pval2[i] <-  summary(a)$`coefficients`[3,5]
+  Area[i] <- colnames(prs_baseline)[i]
+  Warn[i] <- LMEOut$warnings
+}
+
+SMRIg <- cbind.data.frame(Area[First:length(Area)], Beta[First:length(Beta)], STE[First:length(STE)], Pval[First:length(Pval)],  Beta2[First:length(Beta2)], STE2[First:length(STE2)], Pval2[First:length(Pval2)])
+#Relabel Results
+colnames(SMRIg) <- c("Variable", "Beta_non_cog", "STE_non_cog", "Pval_non_cog", "Beta_cog", "STE_cog", "Pval_cog")
+#
+
+First <- 178
+Last <- 179
+Beta <- NULL
+STE <- NULL
+Area <- NULL
+Pval <- NULL
+i <-  NULL
+Warn <- NULL
+Results <- NULL
+Sigs <- NULL
+LMEOut <- NULL
+a <- NULL
+STE2 <- NULL
+Beta2 <- NULL
+Pval2 <- NULL
+for (i in First:Last) {
+  print(i)
+ LMEOut <- withWarnings( a <- lmer(prs_baseline[,i] ~ non_cog_score + cog_score +  C1 + C2 + C3 + C4 + C5 + C6 + C7 + C8 + C9 + C10 + sex + interview_age + mri_info_manufacturer + dmri_dti_meanmotion + (1|mri_info_deviceserialnumber) + (1|rel_family_id), control = lmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=1e5))))
+  Beta[i] <- summary(a)$`coefficients`[2]
+  STE[i] <- summary(a)$`coefficients`[2,2]
+  Pval[i] <-  summary(a)$`coefficients`[2,5]
+   Beta2[i] <- summary(a)$`coefficients`[3]
+  STE2[i] <- summary(a)$`coefficients`[3,2]
+  Pval2[i] <-  summary(a)$`coefficients`[3,5]
+  Area[i] <- colnames(prs_baseline)[i]
+  Warn[i] <- LMEOut$warnings
+}
+
+DTIg <- cbind.data.frame(Area[First:length(Area)], Beta[First:length(Beta)], STE[First:length(STE)], Pval[First:length(Pval)],  Beta2[First:length(Beta2)], STE2[First:length(STE2)], Pval2[First:length(Pval2)])
+
+colnames(DTIg) <- c("Variable", "Beta_non_cog", "STE_non_cog", "Pval_non_cog", "Beta_cog", "STE_cog", "Pval_cog")
+Resultsg <- rbind(SMRIg, DTIg)
+
+Resultsg$FDR_non_cog <- p.adjust(Resultsg$Pval_non_cog, method="fdr")
+Resultsg$FDR_cog <- p.adjust(Resultsg$Pval_cog, method="fdr")
+Resultsg$Bonferroni_non_cog <- p.adjust(Resultsg$Pval_non_cog, method = "bonferroni")
+Resultsg$Bonferroni_cog <- p.adjust(Resultsg$Pval_cog, method = "bonferroni")
+
+fwrite(Resultsg, "global_6_28.csv")
+```
